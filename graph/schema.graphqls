@@ -1,0 +1,39 @@
+type TodoItem {
+  id: Int!
+  title: String!
+  content: String
+  checked: Boolean!
+  createdTime: String!
+  updatedTime: String
+}
+
+type User {
+  id: Int!
+  username: String!
+  password: String
+  createdTime: String!
+  token: String
+}
+
+type Query {
+  todoItems: [TodoItem]
+  todoItem(id: Int!): TodoItem
+  todoItemsByTimeRange(start: String, end: String): [TodoItem]
+  login(username: String!, password: String!): User
+
+}
+
+input TodoItemInput {
+  title: String!
+  content: String
+  checked: Boolean!
+  createdTime: String!
+  updatedTime: String
+}
+
+type Mutation {
+  createTodoItem(todo: TodoItemInput!): TodoItem
+  updateTodoItem(id: Int!, todo: TodoItemInput!): TodoItem
+  deleteTodoItem(id: Int!): TodoItem
+  createUser(username: String!, password: String!): User
+}
