@@ -2,6 +2,8 @@ package main
 
 import (
 	database "github.com/yeung66/todoapi/internal/db"
+	"github.com/yeung66/todoapi/internal/todos"
+	"github.com/yeung66/todoapi/internal/users"
 	"log"
 	"net/http"
 	"os"
@@ -20,7 +22,12 @@ func main() {
 		port = defaultPort
 	}
 
-	database.Init()
+	err := database.Init()
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	database.Db.AutoMigrate(&todos.TodoItem{}, &users.User{})
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
 

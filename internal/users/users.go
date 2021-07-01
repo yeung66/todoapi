@@ -13,6 +13,12 @@ type User struct {
 	Token       string
 }
 
+type WrongUsernameOrPasswordError struct{}
+
+func (m *WrongUsernameOrPasswordError) Error() string {
+	return "wrong username or password"
+}
+
 func (User) TableName() string {
 	return "Users"
 }
@@ -30,4 +36,14 @@ func GetUserByLogin(username, password string) User {
 		user.Token = uuid.UUIDv4()
 	}
 	return user
+}
+
+func GetUserByUsername(username string) (User, error) {
+	var user User
+	res := database.Db.Where(&User{
+		Username: username,
+	}).First(&user)
+
+	return user, res.Error
+
 }

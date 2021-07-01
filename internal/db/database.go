@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -17,7 +16,7 @@ type Tabler interface {
 var Db *gorm.DB
 var path = "todo.db"
 
-func Init() {
+func Init() error {
 	newLogger := logger.New(
 		log.New(os.Stdout, "", log.LstdFlags), // io writer
 		logger.Config{
@@ -32,8 +31,6 @@ func Init() {
 	Db, err = gorm.Open(sqlite.Open(path), &gorm.Config{
 		Logger: newLogger,
 	})
-	if err != nil {
-		panic("failed to connect sqlite database")
-	}
-	fmt.Println("sqlite database connected")
+
+	return err
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/yeung66/todoapi/internal/users"
+	"github.com/yeung66/todoapi/pkg/jwt"
 
 	"github.com/yeung66/todoapi/graph/generated"
 	"github.com/yeung66/todoapi/graph/model"
@@ -129,12 +130,16 @@ func (r *queryResolver) TodoItemsByTimeRange(ctx context.Context, start *string,
 
 func (r *queryResolver) Login(ctx context.Context, username string, password string) (*model.User, error) {
 	user := users.GetUserByLogin(username, password)
+	if user.Id == 0 {
+		return &model.User{}, &users.WrongUsernameOrPasswordError{}
+	}
+	token, err := jwt.GenerateToken(user.Username)
 	return &model.User{
 		ID:          user.Id,
 		Username:    user.Username,
 		CreatedTime: user.CreatedTime,
-		Token:       &user.Token,
-	}, nil
+		Token:       &token,
+	}, err
 }
 
 // Mutation returns generated.MutationResolver implementation.
