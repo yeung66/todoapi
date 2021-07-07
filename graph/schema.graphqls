@@ -5,6 +5,7 @@ type TodoItem {
   checked: Boolean!
   createdTime: String!
   updatedTime: String
+  user: User
 }
 
 type User {

@@ -5,20 +5,27 @@ package graph
 
 import (
 	"context"
-	"fmt"
-	"github.com/yeung66/todoapi/internal/users"
-	"github.com/yeung66/todoapi/pkg/jwt"
+	"strconv"
+	"time"
 
 	"github.com/yeung66/todoapi/graph/generated"
 	"github.com/yeung66/todoapi/graph/model"
+	"github.com/yeung66/todoapi/internal/auth"
 	"github.com/yeung66/todoapi/internal/todos"
+	"github.com/yeung66/todoapi/internal/users"
+	"github.com/yeung66/todoapi/pkg/jwt"
 )
 
 func (r *mutationResolver) CreateTodoItem(ctx context.Context, todo model.TodoItemInput) (*model.TodoItem, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return &model.TodoItem{}, &users.PermissionDeniedError{}
+	}
 	var t todos.TodoItem
 	t.Title = todo.Title
 	t.Checked = todo.Checked
 	t.CreatedTime = todo.CreatedTime
+	t.User = *user
 	if todo.Content != nil {
 		t.Content = *todo.Content
 	}
@@ -38,6 +45,14 @@ func (r *mutationResolver) CreateTodoItem(ctx context.Context, todo model.TodoIt
 }
 
 func (r *mutationResolver) UpdateTodoItem(ctx context.Context, id int, todo model.TodoItemInput) (*model.TodoItem, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return &model.TodoItem{}, &users.PermissionDeniedError{}
+	}
+	if !todos.UserHasTodoItem(user.Id, id) {
+		return &model.TodoItem{}, &users.HasNoTodoItemError{}
+	}
+
 	attrs := map[string]interface{}{
 		"Title":       todo.Title,
 		"Checked":     todo.Checked,
@@ -65,6 +80,14 @@ func (r *mutationResolver) UpdateTodoItem(ctx context.Context, id int, todo mode
 }
 
 func (r *mutationResolver) DeleteTodoItem(ctx context.Context, id int) (*model.TodoItem, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return &model.TodoItem{}, &users.PermissionDeniedError{}
+	}
+	if !todos.UserHasTodoItem(user.Id, id) {
+		return &model.TodoItem{}, &users.HasNoTodoItemError{}
+	}
+
 	t := todos.DeleteTodoItem(id)
 	return &model.TodoItem{
 		ID:          t.Id,
@@ -77,12 +100,35 @@ func (r *mutationResolver) DeleteTodoItem(ctx context.Context, id int) (*model.T
 }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, username string, password string) (*model.User, error) {
-	panic(fmt.Errorf("not implemented"))
+	var user users.User
+	var err error
+	var token string
+	user.Username = username
+	user.Password, _ = users.HashPassword(password)
+	user.CreatedTime = strconv.FormatInt(time.Now().Unix(), 10)
+	token, err = jwt.GenerateToken(username)
+	err = user.Save()
+	if err != nil {
+		return &model.User{}, err
+	}
+
+	return &model.User{
+		ID:          user.Id,
+		Username:    username,
+		Password:    nil,
+		CreatedTime: user.CreatedTime,
+		Token:       &token,
+	}, err
 }
 
 func (r *queryResolver) TodoItems(ctx context.Context) ([]*model.TodoItem, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return []*model.TodoItem{}, &users.PermissionDeniedError{}
+	}
+
 	var ans []*model.TodoItem
-	allTodos := todos.GetAllTodoItems()
+	allTodos := todos.GetUserAllTodoItems(user.Id)
 	for _, t := range allTodos {
 		content := t.Content
 		updatedTime := t.UpdatedTime
@@ -99,7 +145,14 @@ func (r *queryResolver) TodoItems(ctx context.Context) ([]*model.TodoItem, error
 }
 
 func (r *queryResolver) TodoItem(ctx context.Context, id int) (*model.TodoItem, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return &model.TodoItem{}, &users.PermissionDeniedError{}
+	}
 	t := todos.GetTodoItem(id)
+	if t.UserId != user.Id {
+		return &model.TodoItem{}, &users.HasNoTodoItemError{}
+	}
 	return &model.TodoItem{
 		ID:          t.Id,
 		Title:       t.Title,
@@ -111,7 +164,12 @@ func (r *queryResolver) TodoItem(ctx context.Context, id int) (*model.TodoItem, 
 }
 
 func (r *queryResolver) TodoItemsByTimeRange(ctx context.Context, start *string, end *string) ([]*model.TodoItem, error) {
-	allTodos := todos.GetTodoItemsByTimeRange(start, end)
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return []*model.TodoItem{}, &users.PermissionDeniedError{}
+	}
+
+	allTodos := todos.GetUserTodoItemsByTimeRange(start, end, user.Id)
 	var ans []*model.TodoItem
 	for _, t := range allTodos {
 		content := t.Content
@@ -129,17 +187,17 @@ func (r *queryResolver) TodoItemsByTimeRange(ctx context.Context, start *string,
 }
 
 func (r *queryResolver) Login(ctx context.Context, username string, password string) (*model.User, error) {
-	user := users.GetUserByLogin(username, password)
-	if user.Id == 0 {
-		return &model.User{}, &users.WrongUsernameOrPasswordError{}
+	user, err := users.GetUserByLogin(username, password)
+	if err != nil {
+		return &model.User{}, err
 	}
-	token, err := jwt.GenerateToken(user.Username)
+	token, err1 := jwt.GenerateToken(user.Username)
 	return &model.User{
 		ID:          user.Id,
 		Username:    user.Username,
 		CreatedTime: user.CreatedTime,
 		Token:       &token,
-	}, err
+	}, err1
 }
 
 // Mutation returns generated.MutationResolver implementation.

@@ -9,6 +9,7 @@ type TodoItem struct {
 	Checked     bool    `json:"checked"`
 	CreatedTime string  `json:"createdTime"`
 	UpdatedTime *string `json:"updatedTime"`
+	User        *User   `json:"user"`
 }
 
 type TodoItemInput struct {

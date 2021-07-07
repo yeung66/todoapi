@@ -1,26 +1,44 @@
 package users
 
 import (
-	"github.com/dgryski/trifles/uuid"
 	database "github.com/yeung66/todoapi/internal/db"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	Id          int
+	Id          int    `gorm:"primaryKey"`
 	CreatedTime string `gorm:"column:createdTime"`
 	Username    string
 	Password    string
-	Token       string
+	//Token       string
 }
 
 type WrongUsernameOrPasswordError struct{}
+
+type PermissionDeniedError struct {
+}
+
+type HasNoTodoItemError struct {
+}
 
 func (m *WrongUsernameOrPasswordError) Error() string {
 	return "wrong username or password"
 }
 
+func (*PermissionDeniedError) Error() string {
+	return "no permission on such operation"
+}
+
+func (*HasNoTodoItemError) Error() string {
+	return "user has no such todo item"
+}
+
 func (User) TableName() string {
 	return "Users"
+}
+
+func (u *User) Save() error {
+	return database.Db.Create(u).Error
 }
 
 func GetUserByToken(token string) User {
@@ -29,13 +47,13 @@ func GetUserByToken(token string) User {
 	return user
 }
 
-func GetUserByLogin(username, password string) User {
+func GetUserByLogin(username, password string) (User, error) {
 	var user User
-	results := database.Db.Where(&User{Password: password, Username: username}).First(&user)
-	if results.RowsAffected == 1 {
-		user.Token = uuid.UUIDv4()
+	results := database.Db.Where(&User{Username: username}).First(&user)
+	if results.RowsAffected != 1 || !CheckPasswordHash(password, user.Password) {
+		return user, &WrongUsernameOrPasswordError{}
 	}
-	return user
+	return user, nil
 }
 
 func GetUserByUsername(username string) (User, error) {
@@ -46,4 +64,16 @@ func GetUserByUsername(username string) (User, error) {
 
 	return user, res.Error
 
+}
+
+//HashPassword hashes given password
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+//CheckPassword hash compares raw password with it's hashed values
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
