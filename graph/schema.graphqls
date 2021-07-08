@@ -20,7 +20,7 @@ type Query {
   todoItems: [TodoItem]
   todoItem(id: Int!): TodoItem
   todoItemsByTimeRange(start: String, end: String): [TodoItem]
-  login(username: String!, password: String!): User
+
 
 }
 
@@ -37,4 +37,5 @@ type Mutation {
   updateTodoItem(id: Int!, todo: TodoItemInput!): TodoItem
   deleteTodoItem(id: Int!): TodoItem
   createUser(username: String!, password: String!): User
+  login(username: String!, password: String!): User
 }

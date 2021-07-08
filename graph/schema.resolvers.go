@@ -121,6 +121,20 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string, pass
 	}, err
 }
 
+func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.User, error) {
+	user, err := users.GetUserByLogin(username, password)
+	if err != nil {
+		return &model.User{}, err
+	}
+	token, err1 := jwt.GenerateToken(user.Username)
+	return &model.User{
+		ID:          user.Id,
+		Username:    user.Username,
+		CreatedTime: user.CreatedTime,
+		Token:       &token,
+	}, err1
+}
+
 func (r *queryResolver) TodoItems(ctx context.Context) ([]*model.TodoItem, error) {
 	user := auth.ForContext(ctx)
 	if user == nil {
@@ -184,20 +198,6 @@ func (r *queryResolver) TodoItemsByTimeRange(ctx context.Context, start *string,
 		})
 	}
 	return ans, nil
-}
-
-func (r *queryResolver) Login(ctx context.Context, username string, password string) (*model.User, error) {
-	user, err := users.GetUserByLogin(username, password)
-	if err != nil {
-		return &model.User{}, err
-	}
-	token, err1 := jwt.GenerateToken(user.Username)
-	return &model.User{
-		ID:          user.Id,
-		Username:    user.Username,
-		CreatedTime: user.CreatedTime,
-		Token:       &token,
-	}, err1
 }
 
 // Mutation returns generated.MutationResolver implementation.

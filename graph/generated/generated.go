@@ -46,11 +46,11 @@ type ComplexityRoot struct {
 		CreateTodoItem func(childComplexity int, todo model.TodoItemInput) int
 		CreateUser     func(childComplexity int, username string, password string) int
 		DeleteTodoItem func(childComplexity int, id int) int
+		Login          func(childComplexity int, username string, password string) int
 		UpdateTodoItem func(childComplexity int, id int, todo model.TodoItemInput) int
 	}
 
 	Query struct {
-		Login                func(childComplexity int, username string, password string) int
 		TodoItem             func(childComplexity int, id int) int
 		TodoItems            func(childComplexity int) int
 		TodoItemsByTimeRange func(childComplexity int, start *string, end *string) int
@@ -80,12 +80,12 @@ type MutationResolver interface {
 	UpdateTodoItem(ctx context.Context, id int, todo model.TodoItemInput) (*model.TodoItem, error)
 	DeleteTodoItem(ctx context.Context, id int) (*model.TodoItem, error)
 	CreateUser(ctx context.Context, username string, password string) (*model.User, error)
+	Login(ctx context.Context, username string, password string) (*model.User, error)
 }
 type QueryResolver interface {
 	TodoItems(ctx context.Context) ([]*model.TodoItem, error)
 	TodoItem(ctx context.Context, id int) (*model.TodoItem, error)
 	TodoItemsByTimeRange(ctx context.Context, start *string, end *string) ([]*model.TodoItem, error)
-	Login(ctx context.Context, username string, password string) (*model.User, error)
 }
 
 type executableSchema struct {
@@ -139,6 +139,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.DeleteTodoItem(childComplexity, args["id"].(int)), true
 
+	case "Mutation.login":
+		if e.complexity.Mutation.Login == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_login_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.Login(childComplexity, args["username"].(string), args["password"].(string)), true
+
 	case "Mutation.updateTodoItem":
 		if e.complexity.Mutation.UpdateTodoItem == nil {
 			break
@@ -150,18 +162,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UpdateTodoItem(childComplexity, args["id"].(int), args["todo"].(model.TodoItemInput)), true
-
-	case "Query.login":
-		if e.complexity.Query.Login == nil {
-			break
-		}
-
-		args, err := ec.field_Query_login_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Login(childComplexity, args["username"].(string), args["password"].(string)), true
 
 	case "Query.todoItem":
 		if e.complexity.Query.TodoItem == nil {
@@ -364,7 +364,7 @@ type Query {
   todoItems: [TodoItem]
   todoItem(id: Int!): TodoItem
   todoItemsByTimeRange(start: String, end: String): [TodoItem]
-  login(username: String!, password: String!): User
+
 
 }
 
@@ -381,6 +381,7 @@ type Mutation {
   updateTodoItem(id: Int!, todo: TodoItemInput!): TodoItem
   deleteTodoItem(id: Int!): TodoItem
   createUser(username: String!, password: String!): User
+  login(username: String!, password: String!): User
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -443,6 +444,30 @@ func (ec *executionContext) field_Mutation_deleteTodoItem_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["username"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["username"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["password"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["password"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_updateTodoItem_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -479,30 +504,6 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_login_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["username"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["username"] = arg0
-	var arg1 string
-	if tmp, ok := rawArgs["password"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
-		arg1, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["password"] = arg1
 	return args, nil
 }
 
@@ -739,6 +740,45 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	return ec.marshalOUser2ᚖgithubᚗcomᚋyeung66ᚋtodoapiᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_login_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().Login(rctx, args["username"].(string), args["password"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalOUser2ᚖgithubᚗcomᚋyeung66ᚋtodoapiᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_todoItems(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -847,45 +887,6 @@ func (ec *executionContext) _Query_todoItemsByTimeRange(ctx context.Context, fie
 	res := resTmp.([]*model.TodoItem)
 	fc.Result = res
 	return ec.marshalOTodoItem2ᚕᚖgithubᚗcomᚋyeung66ᚋtodoapiᚋgraphᚋmodelᚐTodoItem(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Query_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_login_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Login(rctx, args["username"].(string), args["password"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.User)
-	fc.Result = res
-	return ec.marshalOUser2ᚖgithubᚗcomᚋyeung66ᚋtodoapiᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2534,6 +2535,8 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec._Mutation_deleteTodoItem(ctx, field)
 		case "createUser":
 			out.Values[i] = ec._Mutation_createUser(ctx, field)
+		case "login":
+			out.Values[i] = ec._Mutation_login(ctx, field)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2591,17 +2594,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_todoItemsByTimeRange(ctx, field)
-				return res
-			})
-		case "login":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_login(ctx, field)
 				return res
 			})
 		case "__type":
