@@ -41,10 +41,10 @@ func (u *User) Save() error {
 	return database.Db.Create(u).Error
 }
 
-func GetUserByToken(token string) User {
-	var user User
-	database.Db.Where("token = ?", token).First(&user)
-	return user
+func GetUser(user User) (User, error) {
+	var u User
+	results := database.Db.Where(&user).First(&u)
+	return u, results.Error
 }
 
 func GetUserByLogin(username, password string) (User, error) {

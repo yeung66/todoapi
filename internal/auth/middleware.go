@@ -27,15 +27,15 @@ func Middleware() func(http.Handler) http.Handler {
 
 			//validate jwt token
 			tokenStr := header
-			username, err := jwt.ParseToken(tokenStr)
+			username, id, err := jwt.ParseToken(tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusForbidden)
 				return
 			}
 
 			// create user and check if user exists in db
-			user := users.User{Username: username}
-			user, err = users.GetUserByUsername(username)
+			user := users.User{Username: username, Id: id}
+			user, err = users.GetUser(user)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
