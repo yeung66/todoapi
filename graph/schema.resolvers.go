@@ -106,11 +106,12 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string, pass
 	user.Username = username
 	user.Password, _ = users.HashPassword(password)
 	user.CreatedTime = strconv.FormatInt(time.Now().Unix(), 10)
-	token, err = jwt.GenerateToken(username)
+
 	err = user.Save()
 	if err != nil {
 		return &model.User{}, err
 	}
+	token, err = jwt.GenerateToken(username, user.Id)
 
 	return &model.User{
 		ID:          user.Id,
@@ -126,7 +127,7 @@ func (r *mutationResolver) Login(ctx context.Context, username string, password 
 	if err != nil {
 		return &model.User{}, err
 	}
-	token, err1 := jwt.GenerateToken(user.Username)
+	token, err1 := jwt.GenerateToken(user.Username, user.Id)
 	return &model.User{
 		ID:          user.Id,
 		Username:    user.Username,
