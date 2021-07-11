@@ -80,7 +80,7 @@ func GetUserTodoItemsByTimeRange(start, end *string, userid int) []TodoItem {
 		return GetUserAllTodoItems(userid)
 	}
 
-	db := database.Db.Where("userid = ?", userid)
+	db := database.Db.Where("user_id = ?", userid)
 	var todos []TodoItem
 	if end == nil {
 		db.Find(&todos, "createdTime >= ?", *start)
