@@ -42,6 +42,14 @@ func Middleware() func(http.Handler) http.Handler {
 			username, id, err := jwt.ParseToken(tokenStr)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusForbidden)
+
+				//graphql.AddError(r.Context(), &gqlerror.Error{
+				//	Message:    "invalid token",
+				//	Extensions: map[string]interface{}{
+				//		"code": "UNAUTHENTICATED",
+				//	},
+				//})
+				//next.ServeHTTP(w, r)
 				return
 			}
 

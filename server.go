@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"github.com/yeung66/todoapi/internal/auth"
 	database "github.com/yeung66/todoapi/internal/db"
 	"github.com/yeung66/todoapi/internal/todos"
@@ -36,6 +40,29 @@ func main() {
 	database.Db.AutoMigrate(&todos.TodoItem{}, &users.User{})
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
+	srv.SetErrorPresenter(func(ctx context.Context, e error) *gqlerror.Error {
+		err := graphql.DefaultErrorPresenter(ctx, e)
+		err.Message = e.Error()
+
+		var wrongUserErr *users.WrongUsernameOrPasswordError
+		var permissionErr *users.PermissionDeniedError
+		var noUserErr *users.HasNoTodoItemError
+		if errors.As(e, &wrongUserErr) {
+			err.Extensions = map[string]interface{}{
+				"code": "UNAUTHENTICATED",
+			}
+		} else if errors.As(e, &permissionErr) {
+			err.Extensions = map[string]interface{}{
+				"code": "FORBIDDEN",
+			}
+		} else if errors.As(e, &noUserErr) {
+			err.Extensions = map[string]interface{}{
+				"code": "FORBIDDEN",
+			}
+		}
+
+		return err
+	})
 
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	router.Handle("/query", srv)
