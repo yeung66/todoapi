@@ -49,7 +49,7 @@ func main() {
 		var noUserErr *users.HasNoTodoItemError
 		if errors.As(e, &wrongUserErr) {
 			err.Extensions = map[string]interface{}{
-				"code": "UNAUTHENTICATED",
+				"code": "WRONGINPUT",
 			}
 		} else if errors.As(e, &permissionErr) {
 			err.Extensions = map[string]interface{}{

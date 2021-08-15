@@ -6,6 +6,13 @@ import (
 	"time"
 )
 
+type TokenExpiredError struct {
+}
+
+func (*TokenExpiredError) Error() string {
+	return "token expired"
+}
+
 // secret key being used to sign tokens
 var (
 	SecretKey = []byte("secret")
@@ -39,9 +46,14 @@ func ParseToken(tokenStr string) (string, int, error) {
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		err = nil
+		if claims.VerifyExpiresAt(time.Now().Unix(), false) {
+			err = &TokenExpiredError{}
+		}
+
 		username := claims["username"].(string)
 		id := int(claims["id"].(float64))
-		return username, id, nil
+		return username, id, err
 	} else {
 		return "", -1, err
 	}
