@@ -47,7 +47,7 @@ func ParseToken(tokenStr string) (string, int, error) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		err = nil
-		if claims.VerifyExpiresAt(time.Now().Unix(), false) {
+		if claims["exp"].(int64) < time.Now().Unix() {
 			err = &TokenExpiredError{}
 		}
 
